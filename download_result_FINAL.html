@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing Comparison Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+
+        form {
+            max-width: 600px;
+            margin: 0 auto 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        input[type="file"] {
+            margin: 10px 0;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #downloadBtn {
+            display: inline-block;
+            margin-top: 20px;
+            text-decoration: none;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        #downloadBtn:hover {
+            background-color: #45a049;
+        }
+
+        .result-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+
+        .no-discrepancy {
+            text-align: center;
+            color: #4CAF50;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        tr:hover {
+            background-color: #ddd;
+        }
+    </style>
+     <script>
+        // Check username and password on page load
+        window.onload = function () {
+            // Get username and password from local storage
+            const username = localStorage.getItem('username');
+            const password = localStorage.getItem('password');
+
+            // Validate credentials
+            if (username !== 'Mark' || password !== 'Mark@123') {
+                // Redirect to login page if invalid
+                window.location.href = "index.html";
+            }
+        };
+    </script>
+</head>
+<body>
+    <h1>Billing Comparison Tool</h1>
+    <form id="upload-form">
+        <label for="file1">Upload DMS File:</label><br>
+        <input type="file" id="file1" accept=".xlsx, .xls" required><br>
+        <label for="file2">Upload Miracle File:</label><br>
+        <input type="file" id="file2" accept=".xlsx, .xls" required><br>
+        <label for="nonImeiFile1">Upload DMS Non-IMEI File:</label><br>
+        <input type="file" id="nonImeiFile1" accept=".xlsx, .xls" required><br>
+        <label for="nonImeiFile2">Upload Miracle Non-IMEI File:</label><br>
+        <input type="file" id="nonImeiFile2" accept=".xlsx, .xls" required><br><br>
+        <button type="button" id="compareBtn">Compare IMEI Files</button>
+        <button type="button" id="compareNonImeiBtn">Compare Non-IMEI Files</button>
+    </form>
+    <div id="result" class="result-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
+    <script>
+        document.getElementById('compareBtn').addEventListener('click', () => compareFiles('imei'));
+        document.getElementById('compareNonImeiBtn').addEventListener('click', () => compareFiles('nonImei'));
+
+        function compareFiles(type) {
+            const file1 = document.getElementById(type === 'imei' ? 'file1' : 'nonImeiFile1').files[0];
+            const file2 = document.getElementById(type === 'imei' ? 'file2' : 'nonImeiFile2').files[0];
+
+            if (!file1 || !file2) {
+                alert("Please upload both files.");
+                return;
+            }
+
+            Promise.all([readExcelFile(file1), readExcelFile(file2)])
+                .then(([data1, data2]) => {
+                    const resultHTML = processComparison(data1, data2, type);
+                    document.getElementById('result').innerHTML = resultHTML;
+
+                    document.getElementById('downloadBtn')?.addEventListener('click', () => {
+                        downloadResultFromHTML();
+                    });
+                })
+                .catch(error => {
+                    console.error("Error processing files:", error);
+                    alert("Error processing files. Check console for details.");
+                });
+        }
+
+        function readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = event => {
+                    try {
+                        const data = event.target.result;
+                        const workbook = XLSX.read(data, { type: 'binary' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                        resolve(jsonData);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsBinaryString(file);
+            });
+        }
+
+        function processComparison(data1, data2, type) {
+            const dealerNamesMiracle = extractDealerNames(data2); // Extract dealer names from Miracle
+            const dealerNamesDms = extractDealerNames(data1); // Extract dealer names from DMS
+
+            const map1 = createMap(data1, type);
+            const map2 = createMap(data2, type);
+
+            let discrepancies = [];
+            const allKeys = new Set([...Object.keys(map1), ...Object.keys(map2)]);
+
+            allKeys.forEach(key => {
+                const [dealerCode, code] = key.split('_');
+                const quantity1 = map1[key] || 0;
+                const quantity2 = map2[key] || 0;
+
+                let remark = "";
+                if (quantity1 > quantity2) {
+                    remark = "Return from DMS";
+                } else if (quantity2 > quantity1) {
+                    remark = "Do DMS";
+                }
+
+                const dealerName = dealerNamesMiracle[dealerCode] || dealerNamesDms[dealerCode] || "Unknown";
+
+                if (quantity1 !== quantity2) {
+                    discrepancies.push({ dealerCode, dealerName, code, quantity1, quantity2, remark });
+                }
+            });
+
+            if (discrepancies.length === 0) {
+                return `<p class="no-discrepancy">All records match. No discrepancies found.</p>`;
+            }
+
+            let resultHTML = `
+                <h3>Discrepancies Found</h3>
+                <table id="resultTable">
+                    <thead>
+                        <tr>
+                            <th>Dealer Code</th>
+                            <th>Dealer Name</th>
+                            <th>${type === 'imei' ? 'IMEI' : 'Product Code'}</th>
+                            <th>DMS Total</th>
+                            <th>Miracle Total</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            discrepancies.forEach(({ dealerCode, dealerName, code, quantity1, quantity2, remark }) => {
+                resultHTML += `
+                    <tr>
+                        <td>${dealerCode}</td>
+                        <td>${dealerName}</td>
+                        <td>${code}</td>
+                        <td>${quantity1}</td>
+                        <td>${quantity2}</td>
+                        <td>${remark}</td>
+                    </tr>
+                `;
+            });
+
+            resultHTML += `</tbody></table>
+                <a id="downloadBtn">Download Result</a>`;
+            return resultHTML;
+        }
+
+        function extractDealerNames(data) {
+            const dealerNames = {};
+            data.slice(1).forEach(row => {
+                const dealerCode = String(row[2] || '').trim(); // Dealer code (Column C)
+                const dealerName = String(row[1] || '').trim(); // Dealer name (Column B)
+                if (dealerCode && dealerName) {
+                    dealerNames[dealerCode] = dealerName;
+                }
+            });
+            return dealerNames;
+        }
+
+        function createMap(data, type) {
+            const map = {};
+
+            data.slice(1).forEach(row => {
+                const dealerCode = String(row[2] || '').trim();
+                const code = String(row[type === 'imei' ? 4 : 3] || '').trim();
+                const quantity = parseInt(row[type === 'imei' ? 5 : 4], 10);
+
+                if (dealerCode && code && !isNaN(quantity)) {
+                    const key = `${dealerCode}_${code}`;
+                    map[key] = (map[key] || 0) + quantity;
+                }
+            });
+
+            return map;
+        }
+
+        function downloadResultFromHTML() {
+            const table = document.getElementById('resultTable');
+            if (!table) {
+                alert("No result data to download.");
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.table_to_sheet(table);
+            XLSX.utils.book_append_sheet(wb, ws, "Result");
+            XLSX.writeFile(wb, "ComparisonResult.xlsx");
+        }
+    </script>
+</body>
+</html>

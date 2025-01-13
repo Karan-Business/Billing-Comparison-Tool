@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing Comparison Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .form-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .settings-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 90%;  /* Adjust height to allow for scrolling */
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            z-index: 1000;
+            overflow-y: auto; /* Enable scrolling when content overflows */
+        }
+
+        .settings-container input {
+            margin-bottom: 10px;
+        }
+
+        #settings-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: blue;
+        }
+
+        #result {
+            margin-top: 20px;
+        }
+
+        #compareButton {
+            margin-top: 10px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+        }
+
+        #downloadResultBtn {
+            margin-top: 20px;
+            cursor: pointer;
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Billing Comparison Tool</h1>
+
+    <div class="form-container">
+        <!-- IMEI File Upload & Compare Button -->
+        <h2>IMEI Product Comparison</h2>
+        <label for="file1">Upload DMS IMEI File:</label><br>
+        <input type="file" id="file1" accept=".xlsx, .xls" required><br>
+        <label for="file2">Upload Miracle IMEI File:</label><br>
+        <input type="file" id="file2" accept=".xlsx, .xls" required><br>
+
+        <!-- Compare Button -->
+        <button type="button" id="compareImeiBtn">Compare IMEI Files</button>
+
+        <!-- Non-IMEI File Upload & Compare Button -->
+        <h2>Non-IMEI Product Comparison</h2>
+        <label for="nonImeiFile1">Upload DMS Non-IMEI File:</label><br>
+        <input type="file" id="nonImeiFile1" accept=".xlsx, .xls" required><br>
+        <label for="nonImeiFile2">Upload Miracle Non-IMEI File:</label><br>
+        <input type="file" id="nonImeiFile2" accept=".xlsx, .xls" required><br>
+
+        <!-- Compare Button -->
+        <button type="button" id="compareNonImeiBtn">Compare Non-IMEI Files</button>
+    </div>
+
+    <!-- Result Display Section -->
+    <div id="result" class="result-container"></div>
+
+    <!-- Download Result Button -->
+    <button id="downloadResultBtn" style="display:none;">Download Result</button>
+
+    <!-- Settings Icon -->
+    <div id="settings-icon" onclick="toggleSettings()">⚙️</div>
+
+    <!-- Settings Panel -->
+    <div class="settings-container" id="settings-panel">
+        <h3>Enter Column Numbers</h3>
+
+        <!-- IMEI Column Numbers -->
+        <h4>IMEI Columns</h4>
+        <label for="dms-imei-dealer-code">Dealer Code (DMS IMEI):</label>
+        <input type="text" id="dms-imei-dealer-code" placeholder="e.g. 2" /><br>
+
+        <label for="dms-imei-code">IMEI Code (DMS IMEI):</label>
+        <input type="text" id="dms-imei-code" placeholder="e.g. 3" /><br>
+
+        <label for="dms-imei-quantity">Quantity (DMS IMEI):</label>
+        <input type="text" id="dms-imei-quantity" placeholder="e.g. 4" /><br>
+
+        <label for="dms-imei-dealer-name">Dealer Name (DMS IMEI):</label>
+        <input type="text" id="dms-imei-dealer-name" placeholder="e.g. 1" /><br>
+
+        <label for="miracle-imei-dealer-code">Dealer Code (Miracle IMEI):</label>
+        <input type="text" id="miracle-imei-dealer-code" placeholder="e.g. 2" /><br>
+
+        <label for="miracle-imei-code">IMEI Code (Miracle IMEI):</label>
+        <input type="text" id="miracle-imei-code" placeholder="e.g. 3" /><br>
+
+        <label for="miracle-imei-quantity">Quantity (Miracle IMEI):</label>
+        <input type="text" id="miracle-imei-quantity" placeholder="e.g. 4" /><br>
+
+        <label for="miracle-imei-dealer-name">Dealer Name (Miracle IMEI):</label>
+        <input type="text" id="miracle-imei-dealer-name" placeholder="e.g. 1" /><br>
+
+        <!-- Non-IMEI Column Numbers -->
+        <h4>Non-IMEI Columns</h4>
+        <label for="dms-non-imei-dealer-code">Dealer Code (DMS Non-IMEI):</label>
+        <input type="text" id="dms-non-imei-dealer-code" placeholder="e.g. 2" /><br>
+
+        <label for="dms-non-imei-code">Product Code (DMS Non-IMEI):</label>
+        <input type="text" id="dms-non-imei-code" placeholder="e.g. 3" /><br>
+
+        <label for="dms-non-imei-quantity">Quantity (DMS Non-IMEI):</label>
+        <input type="text" id="dms-non-imei-quantity" placeholder="e.g. 4" /><br>
+
+        <label for="dms-non-imei-dealer-name">Dealer Name (DMS Non-IMEI):</label>
+        <input type="text" id="dms-non-imei-dealer-name" placeholder="e.g. 1" /><br>
+
+        <label for="miracle-non-imei-dealer-code">Dealer Code (Miracle Non-IMEI):</label>
+        <input type="text" id="miracle-non-imei-dealer-code" placeholder="e.g. 2" /><br>
+
+        <label for="miracle-non-imei-code">Product Code (Miracle Non-IMEI):</label>
+        <input type="text" id="miracle-non-imei-code" placeholder="e.g. 3" /><br>
+
+        <label for="miracle-non-imei-quantity">Quantity (Miracle Non-IMEI):</label>
+        <input type="text" id="miracle-non-imei-quantity" placeholder="e.g. 4" /><br>
+
+        <label for="miracle-non-imei-dealer-name">Dealer Name (Miracle Non-IMEI):</label>
+        <input type="text" id="miracle-non-imei-dealer-name" placeholder="e.g. 1" /><br>
+
+        <!-- Close Settings -->
+        <button type="button" onclick="toggleSettings()">Close Settings</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
+    <script>
+        // Toggle settings panel visibility
+        function toggleSettings() {
+            const settingsPanel = document.getElementById('settings-panel');
+            settingsPanel.style.display = settingsPanel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Compare IMEI Files
+        document.getElementById('compareImeiBtn').addEventListener('click', () => compareFiles('imei'));
+        // Compare Non-IMEI Files
+        document.getElementById('compareNonImeiBtn').addEventListener('click', () => compareFiles('nonImei'));
+
+        function compareFiles(type) {
+            const file1 = document.getElementById(type === 'imei' ? 'file1' : 'nonImeiFile1').files[0];
+            const file2 = document.getElementById(type === 'imei' ? 'file2' : 'nonImeiFile2').files[0];
+
+            if (!file1 || !file2) {
+                alert("Please upload both files.");
+                return;
+            }
+
+            // Get user-input column numbers for IMEI or Non-IMEI
+            const dmsDealerCodeColumn = parseInt(document.getElementById(type === 'imei' ? 'dms-imei-dealer-code' : 'dms-non-imei-dealer-code').value.trim()) - 1;
+            const dmsCodeColumn = parseInt(document.getElementById(type === 'imei' ? 'dms-imei-code' : 'dms-non-imei-code').value.trim()) - 1;
+            const dmsQuantityColumn = parseInt(document.getElementById(type === 'imei' ? 'dms-imei-quantity' : 'dms-non-imei-quantity').value.trim()) - 1;
+            const dmsDealerNameColumn = parseInt(document.getElementById(type === 'imei' ? 'dms-imei-dealer-name' : 'dms-non-imei-dealer-name').value.trim()) - 1;
+
+            const miracleDealerCodeColumn = parseInt(document.getElementById(type === 'imei' ? 'miracle-imei-dealer-code' : 'miracle-non-imei-dealer-code').value.trim()) - 1;
+            const miracleCodeColumn = parseInt(document.getElementById(type === 'imei' ? 'miracle-imei-code' : 'miracle-non-imei-code').value.trim()) - 1;
+            const miracleQuantityColumn = parseInt(document.getElementById(type === 'imei' ? 'miracle-imei-quantity' : 'miracle-non-imei-quantity').value.trim()) - 1;
+            const miracleDealerNameColumn = parseInt(document.getElementById(type === 'imei' ? 'miracle-imei-dealer-name' : 'miracle-non-imei-dealer-name').value.trim()) - 1;
+
+            Promise.all([readExcelFile(file1), readExcelFile(file2)]).then(([data1, data2]) => {
+                const resultHTML = processComparison(
+                    data1, data2,
+                    dmsDealerCodeColumn, dmsCodeColumn, dmsQuantityColumn, dmsDealerNameColumn,
+                    miracleDealerCodeColumn, miracleCodeColumn, miracleQuantityColumn, miracleDealerNameColumn,
+                    type
+                );
+                document.getElementById('result').innerHTML = resultHTML;
+                document.getElementById('downloadResultBtn').style.display = 'block'; // Show download button
+            }).catch(error => {
+                console.error("Error processing files:", error);
+                alert("Error processing files. Check console for details.");
+            });
+        }
+
+        function processComparison(data1, data2, dmsDealerCodeColumn, dmsCodeColumn, dmsQuantityColumn, dmsDealerNameColumn,
+            miracleDealerCodeColumn, miracleCodeColumn, miracleQuantityColumn, miracleDealerNameColumn, type) {
+            const dealerNamesMiracle = extractDealerNames(data2, miracleDealerCodeColumn, miracleDealerNameColumn);
+            const dealerNamesDms = extractDealerNames(data1, dmsDealerCodeColumn, dmsDealerNameColumn);
+
+            const map1 = createMap(data1, dmsDealerCodeColumn, dmsCodeColumn, dmsQuantityColumn);
+            const map2 = createMap(data2, miracleDealerCodeColumn, miracleCodeColumn, miracleQuantityColumn);
+
+            let discrepancies = [];
+            const allKeys = new Set([...Object.keys(map1), ...Object.keys(map2)]);
+
+            allKeys.forEach(key => {
+                const [dealerCode, code] = key.split('_');
+                const quantity1 = map1[key] || 0;
+                const quantity2 = map2[key] || 0;
+
+                let remark = "";
+                if (quantity1 > quantity2) {
+                    remark = "Return from DMS";
+                } else if (quantity2 > quantity1) {
+                    remark = "Do DMS";
+                }
+
+                const dealerName = dealerNamesMiracle[dealerCode] || dealerNamesDms[dealerCode] || "Unknown";
+
+                if (quantity1 !== quantity2) {
+                    discrepancies.push({ dealerCode, dealerName, code, quantity1, quantity2, remark });
+                }
+            });
+
+            if (discrepancies.length === 0) {
+                return `<p class="no-discrepancy">All records match. No discrepancies found.</p>`;
+            }
+
+            let resultHTML = `
+                <h3>Discrepancies Found</h3>
+                <table id="resultTable">
+                    <thead>
+                        <tr>
+                            <th>Dealer Code</th>
+                            <th>Dealer Name</th>
+                            <th>${type === 'imei' ? 'IMEI' : 'Product Code'}</th>
+                            <th>DMS Total</th>
+                            <th>Miracle Total</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody
+            `;
+
+            discrepancies.forEach(({ dealerCode, dealerName, code, quantity1, quantity2, remark }) => {
+                resultHTML += `
+                    <tr>
+                        <td>${dealerCode}</td>
+                        <td>${dealerName}</td>
+                        <td>${code}</td>
+                        <td>${quantity1}</td>
+                        <td>${quantity2}</td>
+                        <td>${remark}</td>
+                    </tr>
+                `;
+            });
+
+            resultHTML += `</tbody></table>`;
+            return resultHTML;
+        }
+
+        function extractDealerNames(data, dealerCodeColumn, dealerNameColumn) {
+            const dealerNames = {};
+            data.slice(1).forEach(row => {
+                const dealerCode = String(row[dealerCodeColumn] || '').trim();
+                const dealerName = String(row[dealerNameColumn] || '').trim(); // Dealer Name column
+                if (dealerCode && dealerName) {
+                    dealerNames[dealerCode] = dealerName;
+                }
+            });
+            return dealerNames;
+        }
+
+        function readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetNames = workbook.SheetNames;
+                    const sheet = workbook.Sheets[sheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    resolve(jsonData);
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Helper to create a map from Excel data for comparison
+        function createMap(data, dealerCodeColumn, codeColumn, quantityColumn) {
+            const map = {};
+            data.slice(1).forEach(row => {
+                const dealerCode = String(row[dealerCodeColumn] || '').trim();
+                const code = String(row[codeColumn] || '').trim();
+                const quantity = parseInt(row[quantityColumn]) || 0;
+                if (dealerCode && code) {
+                    const key = `${dealerCode}_${code}`;
+                    map[key] = (map[key] || 0) + quantity;
+                }
+            });
+            return map;
+        }
+    </script>
+</body>
+</html>
